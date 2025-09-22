@@ -1,3 +1,5 @@
+//The idea here is to create some arbsurdly wonky control logic that can be used to control the motors
+
 const int steeringInputPin = 2; // Connect the PWM signal from the receiver channel 1 (steering)
 const int throttlingInputPin = 3; // Connect the PWM signal from the receiver channel 2 (throttling)
 
@@ -125,3 +127,20 @@ void TurnOffMotors(int motorA1, int motorA2, int motorB1, int motorB2) {
     digitalWrite(allPins[i], LOW);
   }
 }
+
+//Brainstorm junk
+
+//ThrottleIntermediate will control both motors equally and proportionally to the duty cycle of the signal from Channel2 (trigger)
+//SteeringIntermediate1 will control the left motor proportionally to the duty cycle of the signal from Channel1 (wheel)
+//SteeringIntermediate2 will control the right motor counter-proportionally to the duty cycle of the signal from Channel1 (wheel).
+
+//OutputSignal1 will be a function of both ThrottleIntermediate and SteeringIntermediate1
+//OutputSignal1 connected to H Bridge of Left Motor
+//OutputSignal1 = ThrottleIntermediate * SteeringIntermediate1
+
+//OutputSignal2 will be a function of both ThrottleIntermediate and SteeringIntermediate2
+//OutputSignal2 connected to H Bridge of Right Motor
+//OutputSignal2 = ThrottleIntermediate * SteeringIntermediate2
+
+
+
