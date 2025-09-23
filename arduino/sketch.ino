@@ -94,7 +94,7 @@ void set_motor_currents(int pwm_A, int pwm_B)
   // Print a status message to the console.
   Serial.print("Set motor A PWM = ");
   Serial.print(pwm_A);
-  Serial.print(" motor B PWM = ");
+  Serial.print("Set motor B PWM = ");
   Serial.println(pwm_B);
 }
 
@@ -130,17 +130,27 @@ void TurnOffMotors(int motorA1, int motorA2, int motorB1, int motorB2) {
 
 //Brainstorm junk
 
+/ThrottleNorm is a normalized version of Throttle, which is the PWM Input Signal of Channel2 (trigger)
+void loop() {
+  byte ThrottleNorm = (Throttle - 10) * 0.25
+//SteeringNorm is a normalized version of Steering, which is the PWM Input Signal of Channel1 (wheel)
+  byte SteeringNorm = (Steer - 10) * 0.25
+}
+
 //ThrottleIntermediate will control both motors equally and proportionally to the duty cycle of the signal from Channel2 (trigger)
+
+//ThrottleIntermediate = f(ThrottleNorm) //some function of ThrottleNorm, modified as needed
+
 //SteeringIntermediate1 will control the left motor proportionally to the duty cycle of the signal from Channel1 (wheel)
+//SteeringIntermediate1 = f(SteeringNorm) //some function of SteeringNorm that gives a value that the H bridge interprets
+
 //SteeringIntermediate2 will control the right motor counter-proportionally to the duty cycle of the signal from Channel1 (wheel).
+//SteeringIntermediate2 = f-1(SteeringNorm) //a function of SteeringNorm that gives the opposite value from that of SteeringIntermediate1
 
 //OutputSignal1 will be a function of both ThrottleIntermediate and SteeringIntermediate1
 //OutputSignal1 connected to H Bridge of Left Motor
-//OutputSignal1 = ThrottleIntermediate * SteeringIntermediate1
+//OutputSignal1 = ThrottleIntermediate * SteeringIntermediate1 //Tweak to make sense to drive treads
 
 //OutputSignal2 will be a function of both ThrottleIntermediate and SteeringIntermediate2
 //OutputSignal2 connected to H Bridge of Right Motor
-//OutputSignal2 = ThrottleIntermediate * SteeringIntermediate2
-
-
-
+//OutputSignal2 = ThrottleIntermediate * SteeringIntermediate2 //Tweak to make sense to drive treads
