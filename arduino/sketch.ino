@@ -130,12 +130,12 @@ void TurnOffMotors(int motorA1, int motorA2, int motorB1, int motorB2) {
 
 //Brainstorm junk
 
-/ThrottleNorm is a normalized version of Throttle, which is the PWM Input Signal of Channel2 (trigger)
-void loop() {
-  byte ThrottleNorm = (Throttle - 10) * 0.25;
+//ThrottleNorm is a normalized version of Throttle, which is the PWM Input Signal of Channel2 (trigger)
+//void loop() {
+  //byte ThrottleNorm = (Throttle - 10) * 0.25;
 //SteeringNorm is a normalized version of Steering, which is the PWM Input Signal of Channel1 (wheel)
-  byte SteeringNorm = (Steer - 10) * 0.25;
-}
+  //byte SteeringNorm = (Steer - 10) * 0.25;
+//}
 
 //ThrottleIntermediate will control both motors equally and proportionally to the duty cycle of the signal from Channel2 (trigger)
 
