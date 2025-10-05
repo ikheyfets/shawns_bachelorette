@@ -39,7 +39,7 @@ void setup() {
 
 void loop() {
   // Serial.print("Steer Percentage = "); //100 is left, 0 is right
-  byte steer = GetPWM(steeringInputPin);
+  float steer = GetPWM(steeringInputPin);
   // Serial.print("Throttle Percentage = "); //100 is full forward, 0 is full reverse
   float throttle = GetPWM(throttlingInputPin);
    Serial.println("");
@@ -57,7 +57,7 @@ void loop() {
   //  6-10 is throttle back, 10-14 is throttle forward
   int speedscalemax = 255;
   float speed;
-  speed = speedscalemax * ((throttle - 10)/4);
+  speed = speedscalemax * ((throttle - 50)/50);
   Serial.println("Setting speed to:");
   Serial.println(speed);
 
@@ -82,14 +82,26 @@ void loop() {
 byte GetPWM(byte pin) {
   unsigned long highTime = pulseIn(pin, HIGH,50000UL);  // 50 millisecond timeout
   unsigned long lowTime = pulseIn(pin, LOW, 50000UL);  // 50 millisecond timeout
-  float rawpercent;
-  float scaledpercent; //function returns a byte anyway
+  float rawPercent;
+  float scaledPercent; //function returns a byte anyway
 
   // pulseIn() returns zero on timeout
   if (highTime == 0 || lowTime == 0)
     return digitalRead(pin) ? 100 : 0;  // HIGH == 100%,  LOW = 0%
 
-  return (100 * highTime) / (highTime + lowTime);  // highTime as percentage of total cycle time
+  // Calculate the raw duty cycle percentage
+  rawPercent = ((100.0 * highTime) / ( highTime + lowTime ));
+
+  // Scale the 6 to 14 percentage to the full 100 percentage scale
+  // These scaling factors were determined by the range on the throttle signal
+  scaledPercent = ( rawPercent - 6.65 ) * 13.09;
+
+  // Clamp the scaled percentage to be between 0 and 100 for later scaling
+  scaledPercent = constrain ( scaledPercent, 0, 100 );
+
+  // Return a value between 0 to 100, with based on the recieved radio input signal
+  return scaledPercent;
+  //return (100 * highTime) / (highTime + lowTime);  // highTime as percentage of total cycle time
 }
 
 //Brainstorm junk
