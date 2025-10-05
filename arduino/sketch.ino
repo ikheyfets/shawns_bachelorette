@@ -62,46 +62,46 @@ void loop() {
   Serial.println(speed);
 
 
-	// Do Steering Calculations
+  // Do Steering Calculations
 
   // Set steering scaleing factor can be -1.0 to 1.0
   float leftTurnScale = 1.0;
   float rightTurnScale = 1.0;
 
-	// bound steer -50 to 50;
-	steer = steer - 50;
+  // bound steer -50 to 50;
+  steer = steer - 50;
 
-	//set a deadzone of 10%
-	if (abs(steer) > 10) {
+  //set a deadzone of 10%
+  if (abs(steer) > 10) {
 
-		if ( steer < 0 ) {  // Turn right
-			// Steer is -50 to 0 here
-			rightTurnScale = (steer + 25) / 25;
-		} else {  // Turn Left
-		  // Steer is 0 to 50 here
-			leftTurnScale = (25 - steer) / 25;
-			
-		}
-	}
+    if ( steer < 0 ) {  // Turn right
+      // Steer is -50 to 0 here
+      rightTurnScale = (steer + 25) / 25;
+    } else {  // Turn Left
+      // Steer is 0 to 50 here
+      leftTurnScale = (25 - steer) / 25;
+      
+    }
+  }
 
   float leftSpeed = speed * leftTurnScale;
   float rightSpeed = speed * rightTurnScale;
 
   // set direction:
-	if (leftSpeed < 0) {
-      digitalWrite(motorA1Pin, LOW);
-      digitalWrite(motorA2Pin, HIGH);
-	} else {
-      digitalWrite(motorA1Pin, HIGH);
-      digitalWrite(motorA2Pin, LOW);
-	}
-	if (rightSpeed < 0) {
-      digitalWrite(motorB1Pin, LOW);
-      digitalWrite(motorB2Pin, HIGH);
-	} else {
-      digitalWrite(motorB1Pin, HIGH);
-      digitalWrite(motorB2Pin, LOW);
-	}
+  if (leftSpeed < 0) {
+    digitalWrite(motorA1Pin, LOW);
+    digitalWrite(motorA2Pin, HIGH);
+  } else {
+    digitalWrite(motorA1Pin, HIGH);
+    digitalWrite(motorA2Pin, LOW);
+  }
+  if (rightSpeed < 0) {
+    digitalWrite(motorB1Pin, LOW);
+    digitalWrite(motorB2Pin, HIGH);
+  } else {
+    digitalWrite(motorB1Pin, HIGH);
+    digitalWrite(motorB2Pin, LOW);
+  }
 
   //  set duty cycle:
   analogWrite(motorAPwmPin, abs(leftSpeed));
