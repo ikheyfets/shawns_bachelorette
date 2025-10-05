@@ -73,9 +73,35 @@ void loop() {
       digitalWrite(motorB1Pin, HIGH);
       digitalWrite(motorB2Pin, LOW);
   }
+
+	// Do Steering Calculations
+
+  // Set steering scaleing factor can be -1.0 to 1.0
+  float leftTurnScale = 1.0;
+  float rightTurnScale = 1.0;
+
+	// bound steer -50 to 50;
+	steer = steer - 50;
+
+	//set a deadzone of 10%
+	if (abs(steer) > 10) {
+
+		if ( steer < 0 ) {  // Turn right
+			// Steer is -50 to 0 here
+			rightTurnScale = (steer + 25) / 25;
+		} else {  // Turn Left
+		  // Steer is 0 to 50 here
+			leftTurnScale = (steer - 25) / 25;
+			
+		}
+	}
+
+  byte leftSpeed = speed * leftTurnScale;
+  byte rightSpeed = speed * rightTurnScale;
+
   //  set duty cycle:
-  analogWrite(motorAPwmPin, abs(speed));
-  analogWrite(motorBPwmPin, abs(speed));
+  analogWrite(motorAPwmPin, abs(leftSpeed));
+  analogWrite(motorBPwmPin, abs(rightSpeed));
 }
 
 // source: https://forum.arduino.cc/t/reading-a-pwm-signal/603967/4
