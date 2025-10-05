@@ -9,8 +9,9 @@ const int motorA2Pin = 6; //was 9
 const int motorAPwmPin = 5; // moved pins around because one of them needs to be PWM 
 
 // // Defining motor B control inputs
-// const int motorB1Pin = 9; //was 6
-// const int motorB2Pin = 10; //was 5
+const int motorB1Pin = 8; 
+const int motorB2Pin = 10; //was 5
+const int motorBPwmPin = 9;
 
 // PWM code source: https://lastminuteengineers.com/drv8833-arduino-tutorial/
 
@@ -23,8 +24,10 @@ void setup() {
   pinMode(motorA2Pin, OUTPUT);
   pinMode(motorAPwmPin, OUTPUT);
   
-  // pinMode(motorB1Pin, OUTPUT);
-  // pinMode(motorB2Pin, OUTPUT);
+  pinMode(motorB1Pin, OUTPUT);
+  pinMode(motorB2Pin, OUTPUT);
+  pinMode(motorBPwmPin, OUTPUT);
+
 
   // TurnOffMotors(motorA1Pin, motorA2Pin, motorB1Pin, motorB2Pin);
 
@@ -38,7 +41,12 @@ void loop() {
   // Serial.print("Steer Percentage = "); //100 is left, 0 is right
   byte steer = GetPWM(steeringInputPin);
   // Serial.print("Throttle Percentage = "); //100 is full forward, 0 is full reverse
-  byte throttle = GetPWM(throttlingInputPin);
+  float throttle = GetPWM(throttlingInputPin);
+   Serial.println("");
+  Serial.println("");
+  Serial.println("Throttle = ");
+  Serial.println(throttle);
+  Serial.println("");
   
   //  if both are zero, the transmitter is OFF, do nothing 
   if (steer == 0 && throttle == 0) {
@@ -47,19 +55,27 @@ void loop() {
   }
 
   //  6-10 is throttle back, 10-14 is throttle forward
-  int speed = 255;
-  speed = speed * ((throttle - 10)/4);
-  Serial.println("Setting speed to:" + speed);
+  int speedscalemax = 255;
+  float speed;
+  speed = speedscalemax * ((throttle - 10)/4);
+  Serial.println("Setting speed to:");
+  Serial.println(speed);
+
   // set direction:
   if (speed < 0) {
       digitalWrite(motorA1Pin, LOW);
       digitalWrite(motorA2Pin, HIGH);
+      digitalWrite(motorB1Pin, LOW);
+      digitalWrite(motorB2Pin, HIGH);
   } else {
       digitalWrite(motorA1Pin, HIGH);
       digitalWrite(motorA2Pin, LOW);
+      digitalWrite(motorB1Pin, HIGH);
+      digitalWrite(motorB2Pin, LOW);
   }
   //  set duty cycle:
   analogWrite(motorAPwmPin, abs(speed));
+  analogWrite(motorBPwmPin, abs(speed));
 }
 
 // source: https://forum.arduino.cc/t/reading-a-pwm-signal/603967/4
