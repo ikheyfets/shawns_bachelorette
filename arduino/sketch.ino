@@ -74,14 +74,28 @@ void loop() {
   //set a deadzone of 10%
   if (abs(steer) > 10) {
 
-    if ( steer < 0 ) {  // Turn right
+    if (steer < 0) {  // Turn right
       // Steer is -50 to 0 here
       rightTurnScale = (steer + 25) / 25;
     } else {  // Turn Left
       // Steer is 0 to 50 here
       leftTurnScale = (25 - steer) / 25;
-      
     }
+
+    // Special case for no throttle turning (zero radius)
+    // Check that throttle is in the dead zone
+    // Only zero radius turn if turning more than half way in that direction
+    if (abs(speed) < 20 && abs(steer) > 25) {
+      // Set speed to be scaled down on the motors
+      speed = 255;
+      // If turning right, set our left motor to be the opposite direction and power
+      if (steer < 0)
+        leftTurnScale = -rightTurnScale;
+      // If turning left, set our right motor to be the opposite direction and power
+      else
+        rightTurnScale = -leftTurnScale;
+    }
+
   }
 
   float leftSpeed = speed * leftTurnScale;
@@ -104,8 +118,10 @@ void loop() {
   }
 
   //  set duty cycle:
-  analogWrite(motorAPwmPin, abs(leftSpeed));
-  analogWrite(motorBPwmPin, abs(rightSpeed));
+  if ( abs(leftSpeed) > 20 )
+    analogWrite(motorAPwmPin, abs(leftSpeed));
+  if ( abs(leftSpeed) > 20 )
+    analogWrite(motorBPwmPin, abs(rightSpeed));
 }
 
 // source: https://forum.arduino.cc/t/reading-a-pwm-signal/603967/4
