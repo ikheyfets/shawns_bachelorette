@@ -118,10 +118,12 @@ void loop() {
   }
 
   //  set duty cycle:
-  if ( abs(leftSpeed) > 20 )
-    analogWrite(motorAPwmPin, abs(leftSpeed));
-  if ( abs(leftSpeed) > 20 )
-    analogWrite(motorBPwmPin, abs(rightSpeed));
+  if ( abs(leftSpeed) < 20 )
+    leftSpeed = 0;
+  if ( abs(leftSpeed) < 20 )
+    rightSpeed = 0;
+  analogWrite(motorAPwmPin, abs(leftSpeed));
+  analogWrite(motorBPwmPin, abs(rightSpeed));
 }
 
 // source: https://forum.arduino.cc/t/reading-a-pwm-signal/603967/4
