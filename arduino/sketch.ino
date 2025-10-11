@@ -138,13 +138,10 @@ byte GetPWM(byte pin) {
     return digitalRead(pin) ? 100 : 0;  // HIGH == 100%,  LOW = 0%
 
   // Calculate the raw duty cycle percentage
-  rawPercent = ((100.0 * highTime) / ( highTime + lowTime ));
-
-  // Scale the 6 to 14 percentage to the full 100 percentage scale
-  // These scaling factors were determined by the range on the throttle signal
+  rawPercent = ((100.0 * highTime) / ( highTime + lowTime   // These scaling factors were determined by the range on the throttle signal
   scaledPercent = ( rawPercent - 6.65 ) * 13.09;
 
-  // Clamp the scaled percentage to be between 0 and 100 for later scaling
+  // Clamp the scaled percentage to be between 0 and 100 for later scalingtbgttg
   scaledPercent = constrain ( scaledPercent, 0, 100 );
 
   // Return a value between 0 to 100, with based on the recieved radio input signal
