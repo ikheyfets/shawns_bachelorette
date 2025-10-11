@@ -1,22 +1,25 @@
-//The idea here is to create some arbsurdly wonky control logic that can be used to control the motors
+//Improved control logic with progressive steering radii
 
-const int steeringInputPin = 2; // Connect the PWM signal from the receiver channel 1 (steering)
-const int throttlingInputPin = 3; // Connect the PWM signal from the receiver channel 2 (throttling)
+const int steeringInputPin = 2; 
+const int throttlingInputPin = 3;
 
 // Defining motor A control inputs
-const int motorA1Pin = 7; //was 10 
-const int motorA2Pin = 6; //was 9
-const int motorAPwmPin = 5; // moved pins around because one of them needs to be PWM 
+const int motorA1Pin = 7;
+const int motorA2Pin = 6;
+const int motorAPwmPin = 5;
 
-// // Defining motor B control inputs
+// Defining motor B control inputs
 const int motorB1Pin = 8; 
-const int motorB2Pin = 10; //was 5
+const int motorB2Pin = 10;
 const int motorBPwmPin = 9;
 
-// PWM code source: https://lastminuteengineers.com/drv8833-arduino-tutorial/
+// Steering configuration
+const float STEER_DEADZONE = 5.0;  // Reduced deadzone for finer control
+const float STEER_CURVE_EXPONENT = 1.5;  // Controls steering progressiveness (1.0 = linear, >1.0 = more progressive)
+const float MIN_TURN_SPEED_FACTOR = 0.3;  // Minimum speed on inside wheel during turn (30%)
+const float ZERO_RADIUS_THRESHOLD = 35.0;  // Steering must exceed this for zero-radius turn
 
 void setup() {
-  // Set pin modes
   pinMode(steeringInputPin, INPUT);
   pinMode(throttlingInputPin, INPUT);
 
@@ -28,80 +31,103 @@ void setup() {
   pinMode(motorB2Pin, OUTPUT);
   pinMode(motorBPwmPin, OUTPUT);
 
-
-  // TurnOffMotors(motorA1Pin, motorA2Pin, motorB1Pin, motorB2Pin);
-
-  // Start serial communication at 9600 bps
   Serial.begin(9600);
-
-  Serial.println("Reading digital state...");
+  Serial.println("Progressive Steering Control Active");
 }
 
 void loop() {
-  // Serial.print("Steer Percentage = "); //100 is left, 0 is right
   float steer = GetPWM(steeringInputPin);
-  // Serial.print("Throttle Percentage = "); //100 is full forward, 0 is full reverse
   float throttle = GetPWM(throttlingInputPin);
-   Serial.println("");
-  Serial.println("");
-  Serial.println("Throttle = ");
-  Serial.println(throttle);
-  Serial.println("");
   
-  //  if both are zero, the transmitter is OFF, do nothing 
+  // Check if transmitter is off
   if (steer == 0 && throttle == 0) {
     Serial.println("Make sure your transmitter is ON");
-    return; // Skip the remaining loop and move on to the next iteration
+    stopMotors();
+    return;
   }
 
-  //  6-10 is throttle back, 10-14 is throttle forward
+  // Calculate base speed from throttle
   int speedscalemax = 255;
-  float speed;
-  speed = speedscalemax * ((throttle - 50)/50);
-  Serial.println("Setting speed to:");
-  Serial.println(speed);
-
-
-  // Do Steering Calculations
-
-  // Set steering scaleing factor can be -1.0 to 1.0
+  float speed = speedscalemax * ((throttle - 50) / 50);
+  
+  // Center steering around 0 (-50 to +50)
+  float steerCentered = steer - 50;
+  
+  // Calculate turn scales with progressive steering
   float leftTurnScale = 1.0;
   float rightTurnScale = 1.0;
-
-  // bound steer -50 to 50;
-  steer = steer - 50;
-
-  //set a deadzone of 10%
-  if (abs(steer) > 10) {
-
-    if (steer < 0) {  // Turn right
-      // Steer is -50 to 0 here
-      rightTurnScale = (steer + 25) / 25;
-    } else {  // Turn Left
-      // Steer is 0 to 50 here
-      leftTurnScale = (25 - steer) / 25;
+  
+  // Apply deadzone
+  if (abs(steerCentered) > STEER_DEADZONE) {
+    
+    // Normalize steering to -1.0 to +1.0 range (outside deadzone)
+    float steerNormalized;
+    if (steerCentered > 0) {
+      // Left turn: map from DEADZONE to 50 → 0 to 1.0
+      steerNormalized = (steerCentered - STEER_DEADZONE) / (50 - STEER_DEADZONE);
+    } else {
+      // Right turn: map from -DEADZONE to -50 → 0 to -1.0
+      steerNormalized = (steerCentered + STEER_DEADZONE) / (50 - STEER_DEADZONE);
     }
-
-    // Special case for no throttle turning (zero radius)
-    // Check that throttle is in the dead zone
-    // Only zero radius turn if turning more than half way in that direction
-    if (abs(speed) < 20 && abs(steer) > 25) {
-      // Set speed to be scaled down on the motors
-      speed = 255;
-      // If turning right, set our left motor to be the opposite direction and power
-      if (steer < 0)
-        leftTurnScale = -rightTurnScale;
-      // If turning left, set our right motor to be the opposite direction and power
-      else
-        rightTurnScale = -leftTurnScale;
+    
+    // Clamp to [-1.0, 1.0]
+    steerNormalized = constrain(steerNormalized, -1.0, 1.0);
+    
+    // Apply curve for progressive response
+    // This creates smoother gradations in turning
+    float steerCurved = sign(steerNormalized) * pow(abs(steerNormalized), STEER_CURVE_EXPONENT);
+    
+    // Calculate turn reduction factor (how much to slow down inside wheel)
+    // Goes from 1.0 (straight) to MIN_TURN_SPEED_FACTOR (full turn)
+    float turnReduction = 1.0 - (abs(steerCurved) * (1.0 - MIN_TURN_SPEED_FACTOR));
+    
+    if (steerCurved < 0) {  
+      // Turn RIGHT: reduce right motor speed
+      rightTurnScale = turnReduction;
+      leftTurnScale = 1.0;
+    } else {  
+      // Turn LEFT: reduce left motor speed
+      leftTurnScale = turnReduction;
+      rightTurnScale = 1.0;
     }
-
+    
+    // Special case: Zero-radius turn when throttle is near neutral
+    if (abs(speed) < 20 && abs(steerCentered) > ZERO_RADIUS_THRESHOLD) {
+      speed = 255;  // Full power for pivot turn
+      
+      // Calculate how far past threshold (0 to 1.0)
+      float pivotIntensity = (abs(steerCentered) - ZERO_RADIUS_THRESHOLD) / (50 - ZERO_RADIUS_THRESHOLD);
+      pivotIntensity = constrain(pivotIntensity, 0.0, 1.0);
+      
+      if (steerCentered < 0) {
+        // Pivot right: left forward, right backward
+        leftTurnScale = 1.0;
+        rightTurnScale = -pivotIntensity;  // Gradually increase reverse speed
+      } else {
+        // Pivot left: right forward, left backward
+        rightTurnScale = 1.0;
+        leftTurnScale = -pivotIntensity;  // Gradually increase reverse speed
+      }
+    }
+    
+    // Debug output
+    Serial.print("Steer: ");
+    Serial.print(steerCentered);
+    Serial.print(" | Normalized: ");
+    Serial.print(steerNormalized);
+    Serial.print(" | Curved: ");
+    Serial.print(steerCurved);
+    Serial.print(" | L_Scale: ");
+    Serial.print(leftTurnScale);
+    Serial.print(" | R_Scale: ");
+    Serial.println(rightTurnScale);
   }
 
+  // Calculate final motor speeds
   float leftSpeed = speed * leftTurnScale;
   float rightSpeed = speed * rightTurnScale;
 
-  // set direction:
+  // Set motor directions
   if (leftSpeed < 0) {
     digitalWrite(motorA1Pin, LOW);
     digitalWrite(motorA2Pin, HIGH);
@@ -109,6 +135,7 @@ void loop() {
     digitalWrite(motorA1Pin, HIGH);
     digitalWrite(motorA2Pin, LOW);
   }
+  
   if (rightSpeed < 0) {
     digitalWrite(motorB1Pin, LOW);
     digitalWrite(motorB2Pin, HIGH);
@@ -117,64 +144,49 @@ void loop() {
     digitalWrite(motorB2Pin, LOW);
   }
 
-  //  set duty cycle:
-  if ( abs(leftSpeed) < 20 )
-    leftSpeed = 0;
-  if ( abs(leftSpeed) < 20 )
-    rightSpeed = 0;
+  // Apply speed deadzone and set PWM
+  if (abs(leftSpeed) < 20) leftSpeed = 0;
+  if (abs(rightSpeed) < 20) rightSpeed = 0;
+  
   analogWrite(motorAPwmPin, abs(leftSpeed));
   analogWrite(motorBPwmPin, abs(rightSpeed));
+  
+  // Debug output
+  Serial.print("Speed: ");
+  Serial.print(speed);
+  Serial.print(" | L: ");
+  Serial.print(leftSpeed);
+  Serial.print(" | R: ");
+  Serial.println(rightSpeed);
 }
 
-// source: https://forum.arduino.cc/t/reading-a-pwm-signal/603967/4
+float sign(float value) {
+  if (value > 0) return 1.0;
+  if (value < 0) return -1.0;
+  return 0.0;
+}
+
+void stopMotors() {
+  analogWrite(motorAPwmPin, 0);
+  analogWrite(motorBPwmPin, 0);
+  digitalWrite(motorA1Pin, LOW);
+  digitalWrite(motorA2Pin, LOW);
+  digitalWrite(motorB1Pin, LOW);
+  digitalWrite(motorB2Pin, LOW);
+}
+
 byte GetPWM(byte pin) {
-  unsigned long highTime = pulseIn(pin, HIGH,50000UL);  // 50 millisecond timeout
-  unsigned long lowTime = pulseIn(pin, LOW, 50000UL);  // 50 millisecond timeout
+  unsigned long highTime = pulseIn(pin, HIGH, 50000UL);
+  unsigned long lowTime = pulseIn(pin, LOW, 50000UL);
   float rawPercent;
-  float scaledPercent; //function returns a byte anyway
+  float scaledPercent;
 
-  // pulseIn() returns zero on timeout
   if (highTime == 0 || lowTime == 0)
-    return digitalRead(pin) ? 100 : 0;  // HIGH == 100%,  LOW = 0%
+    return digitalRead(pin) ? 100 : 0;
 
-  // Calculate the raw duty cycle percentage
-  rawPercent = ((100.0 * highTime) / ( highTime + lowTime ));
+  rawPercent = ((100.0 * highTime) / (highTime + lowTime));
+  scaledPercent = (rawPercent - 6.65) * 13.09;
+  scaledPercent = constrain(scaledPercent, 0, 100);
 
-  // Scale the 6 to 14 percentage to the full 100 percentage scale
-  // These scaling factors were determined by the range on the throttle signal
-  scaledPercent = ( rawPercent - 6.65 ) * 13.09;
-
-  // Clamp the scaled percentage to be between 0 and 100 for later scaling
-  scaledPercent = constrain ( scaledPercent, 0, 100 );
-
-  // Return a value between 0 to 100, with based on the recieved radio input signal
   return scaledPercent;
-  //return (100 * highTime) / (highTime + lowTime);  // highTime as percentage of total cycle time
 }
-
-//Brainstorm junk
-
-//ThrottleNorm is a normalized version of Throttle, which is the PWM Input Signal of Channel2 (trigger)
-//void loop() {
-//  byte ThrottleNorm = (Throttle - 10) * 0.25;
-//SteeringNorm is a normalized version of Steering, which is the PWM Input Signal of Channel1 (wheel)
-//  byte SteeringNorm = (Steer - 10) * 0.25;
-//}
-
-//ThrottleIntermediate will control both motors equally and proportionally to the duty cycle of the signal from Channel2 (trigger)
-
-//ThrottleIntermediate = f(ThrottleNorm) //some function of ThrottleNorm, modified as needed
-
-//SteeringIntermediate1 will control the left motor proportionally to the duty cycle of the signal from Channel1 (wheel)
-//SteeringIntermediate1 = f(SteeringNorm) //some function of SteeringNorm that gives a value that the H bridge interprets
-
-//SteeringIntermediate2 will control the right motor counter-proportionally to the duty cycle of the signal from Channel1 (wheel).
-//SteeringIntermediate2 = f-1(SteeringNorm) //a function of SteeringNorm that gives the opposite value from that of SteeringIntermediate1
-
-//OutputSignal1 will be a function of both ThrottleIntermediate and SteeringIntermediate1
-//OutputSignal1 connected to H Bridge of Left Motor
-//OutputSignal1 = ThrottleIntermediate * SteeringIntermediate1 //Tweak to make sense to drive treads
-
-//OutputSignal2 will be a function of both ThrottleIntermediate and SteeringIntermediate2
-//OutputSignal2 connected to H Bridge of Right Motor
-//OutputSignal2 = ThrottleIntermediate * SteeringIntermediate2 //Tweak to make sense to drive treads
