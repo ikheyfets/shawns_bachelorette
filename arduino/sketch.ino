@@ -1,17 +1,17 @@
 //The idea here is to create some arbsurdly wonky control logic that can be used to control the motors
 
-const int steeringInputPin = 2; // Connect the PWM signal from the receiver channel 1 (steering)
-const int throttlingInputPin = 3; // Connect the PWM signal from the receiver channel 2 (throttling)
+const int steeringInputPin = 3; // Connect the PWM signal from the receiver channel 1 (steering)
+const int throttlingInputPin = 2; // Connect the PWM signal from the receiver channel 2 (throttling)
 
 // Defining motor A control inputs
-const int motorA1Pin = 7; //was 10 
-const int motorA2Pin = 6; //was 9
-const int motorAPwmPin = 5; // moved pins around because one of them needs to be PWM 
+const int motorB1Pin = 7; //was 10 
+const int motorB2Pin = 6; //was 9
+const int motorBPwmPin = 5; // moved pins around because one of them needs to be PWM 
 
 // // Defining motor B control inputs
-const int motorB1Pin = 8; 
-const int motorB2Pin = 10; //was 5
-const int motorBPwmPin = 9;
+const int motorA1Pin = 8; 
+const int motorA2Pin = 10; //was 5
+const int motorAPwmPin = 9;
 
 // PWM code source: https://lastminuteengineers.com/drv8833-arduino-tutorial/
 
@@ -42,11 +42,13 @@ void loop() {
   float steer = GetPWM(steeringInputPin);
   // Serial.print("Throttle Percentage = "); //100 is full forward, 0 is full reverse
   float throttle = GetPWM(throttlingInputPin);
-   Serial.println("");
-  Serial.println("");
-  Serial.println("Throttle = ");
-  Serial.println(throttle);
-  Serial.println("");
+  // Serial.println("");
+  // Serial.println("");
+  // Serial.println("throttle = ");
+  // Serial.println(GetPWM(throttlingInputPin));
+  // Serial.println("");
+
+
   
   //  if both are zero, the transmitter is OFF, do nothing 
   if (steer == 0 && throttle == 0) {
@@ -54,12 +56,15 @@ void loop() {
     return; // Skip the remaining loop and move on to the next iteration
   }
 
-  //  6-10 is throttle back, 10-14 is throttle forward
+  // Serial.println(throttle);
+  // Serial.println(steer);
+
+  // //  6-10 is throttle back, 10-14 is throttle forward
   int speedscalemax = 255;
   float speed;
   speed = speedscalemax * ((throttle - 50)/50);
-  Serial.println("Setting speed to:");
-  Serial.println(speed);
+  // Serial.println("Setting speed to:");
+  // Serial.println(speed);
 
 
   // Do Steering Calculations
@@ -71,16 +76,23 @@ void loop() {
   // bound steer -50 to 50;
   steer = steer - 50;
 
+  //  Serial.print("steer");
+  //  Serial.println(steer);
+
   //set a deadzone of 10%
   if (abs(steer) > 10) {
 
     if (steer < 0) {  // Turn right
       // Steer is -50 to 0 here
-      rightTurnScale = (steer + 25) / 25;
+      leftTurnScale = (steer + 25) / 25;
     } else {  // Turn Left
       // Steer is 0 to 50 here
-      leftTurnScale = (25 - steer) / 25;
+      rightTurnScale = (25 - steer) / 25;
     }
+
+    Serial.println(leftTurnScale);
+    Serial.println(rightTurnScale);
+
 
     // Special case for no throttle turning (zero radius)
     // Check that throttle is in the dead zone
@@ -89,7 +101,7 @@ void loop() {
       // Set speed to be scaled down on the motors
       speed = 255;
       // If turning right, set our left motor to be the opposite direction and power
-      if (steer < 0)
+      if (steer > 0)
         leftTurnScale = -rightTurnScale;
       // If turning left, set our right motor to be the opposite direction and power
       else
@@ -110,11 +122,11 @@ void loop() {
     digitalWrite(motorA2Pin, LOW);
   }
   if (rightSpeed < 0) {
-    digitalWrite(motorB1Pin, LOW);
-    digitalWrite(motorB2Pin, HIGH);
-  } else {
     digitalWrite(motorB1Pin, HIGH);
     digitalWrite(motorB2Pin, LOW);
+  } else {
+    digitalWrite(motorB1Pin, LOW);
+    digitalWrite(motorB2Pin, HIGH);
   }
 
   //  set duty cycle:
@@ -122,6 +134,7 @@ void loop() {
     leftSpeed = 0;
   if ( abs(leftSpeed) < 20 )
     rightSpeed = 0;
+
   analogWrite(motorAPwmPin, abs(leftSpeed));
   analogWrite(motorBPwmPin, abs(rightSpeed));
 }
@@ -138,40 +151,16 @@ byte GetPWM(byte pin) {
     return digitalRead(pin) ? 100 : 0;  // HIGH == 100%,  LOW = 0%
 
   // Calculate the raw duty cycle percentage
-  rawPercent = ((100.0 * highTime) / ( highTime + lowTime   // These scaling factors were determined by the range on the throttle signal
+  rawPercent = ((100.0 * highTime) / ( highTime + lowTime ));
+
+  // Scale the 6 to 14 percentage to the full 100 percentage scale
+  // These scaling factors were determined by the range on the throttle signal
   scaledPercent = ( rawPercent - 6.65 ) * 13.09;
 
-  // Clamp the scaled percentage to be between 0 and 100 for later scalingtbgttg
+  // Clamp the scaled percentage to be between 0 and 100 for later scaling
   scaledPercent = constrain ( scaledPercent, 0, 100 );
 
   // Return a value between 0 to 100, with based on the recieved radio input signal
   return scaledPercent;
   //return (100 * highTime) / (highTime + lowTime);  // highTime as percentage of total cycle time
 }
-
-//Brainstorm junk
-
-//ThrottleNorm is a normalized version of Throttle, which is the PWM Input Signal of Channel2 (trigger)
-//void loop() {
-//  byte ThrottleNorm = (Throttle - 10) * 0.25;
-//SteeringNorm is a normalized version of Steering, which is the PWM Input Signal of Channel1 (wheel)
-//  byte SteeringNorm = (Steer - 10) * 0.25;
-//}
-
-//ThrottleIntermediate will control both motors equally and proportionally to the duty cycle of the signal from Channel2 (trigger)
-
-//ThrottleIntermediate = f(ThrottleNorm) //some function of ThrottleNorm, modified as needed
-
-//SteeringIntermediate1 will control the left motor proportionally to the duty cycle of the signal from Channel1 (wheel)
-//SteeringIntermediate1 = f(SteeringNorm) //some function of SteeringNorm that gives a value that the H bridge interprets
-
-//SteeringIntermediate2 will control the right motor counter-proportionally to the duty cycle of the signal from Channel1 (wheel).
-//SteeringIntermediate2 = f-1(SteeringNorm) //a function of SteeringNorm that gives the opposite value from that of SteeringIntermediate1
-
-//OutputSignal1 will be a function of both ThrottleIntermediate and SteeringIntermediate1
-//OutputSignal1 connected to H Bridge of Left Motor
-//OutputSignal1 = ThrottleIntermediate * SteeringIntermediate1 //Tweak to make sense to drive treads
-
-//OutputSignal2 will be a function of both ThrottleIntermediate and SteeringIntermediate2
-//OutputSignal2 connected to H Bridge of Right Motor
-//OutputSignal2 = ThrottleIntermediate * SteeringIntermediate2 //Tweak to make sense to drive treads
