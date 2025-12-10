@@ -1,4 +1,5 @@
-//The idea here is to create some arbsurdly wonky control logic that can be used to control the motors
+//This file provides the control logic for a tankbot controlled via PWM signals from an RC receiver.
+//It reads steering and throttling inputs, processes them, and sets motor speeds accordingly.
 
 const int steeringInputPin = 2; // Connect the PWM signal from the receiver channel 1 (steering)
 const int throttlingInputPin = 3; // Connect the PWM signal from the receiver channel 2 (throttling)
