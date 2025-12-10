@@ -1,4 +1,5 @@
-//The idea here is to create some arbsurdly wonky control logic that can be used to control the motors
+//This file provides the control logic for a tankbot controlled via PWM signals from an RC receiver.
+//It reads steering and throttling inputs, processes them, and sets motor speeds accordingly.
 
 const int steeringInputPin = 2; // Connect the PWM signal from the receiver channel 1 (steering)
 const int throttlingInputPin = 3; // Connect the PWM signal from the receiver channel 2 (throttling)
@@ -64,14 +65,14 @@ void loop() {
 
   // Do Steering Calculations
 
-  // Set steering scaleing factor can be -1.0 to 1.0
+  // Set steering scaling factor to be -1.0 to 1.0
   float leftTurnScale = 1.0;
   float rightTurnScale = 1.0;
 
-  // bound steer -50 to 50;
+  // bound steer -50 to 50; Does this actually bould steer from -50 to 50?
   steer = steer - 50;
 
-  //set a deadzone of 10%
+  //set a deadzone of 10% Wouldn't this set a deadzone of 20%? Steer is -50 to 50, rather than -100 to 100
   if (abs(steer) > 10) {
 
     if (steer < 0) {  // Turn right
